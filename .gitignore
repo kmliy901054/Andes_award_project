@@ -1,0 +1,43 @@
+# Python cache / bytecode
+__pycache__/
+*.py[cod]
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE / editor
+.vscode/
+.idea/
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# Large local data and generated artifacts
+Training_Data/
+data/
+collected_data/
+pose_output/
+combined_output/
+backup_before_swap/
+*.zip
+*.rar
+*.7z
+*.mp4
+*.npy

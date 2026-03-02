@@ -1,0 +1,12 @@
+numpy
+pandas
+openpyxl
+opencv-python
+mediapipe
+torch
+PySide6
+pyttsx3
+bleak
+requests
+pyserial
+tensorflow
