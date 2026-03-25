@@ -8,23 +8,27 @@ An end-to-end prototype for real-time exercise coaching using:
 - optional local LLM coaching (Ollama + Breeze)
 - desktop UI (PySide6) + TTS feedback
 
+This README covers the runtime flow, hardware context, model assets, firmware entrypoints, and demo assets for the prototype.
+
 ---
 
 ## Table of Contents
 
 1. Project Scope
-2. Repository Structure
-3. Core Runtime Pipeline
-4. Environment Setup
-5. Quick Start
-6. Configuration Reference
-7. Data Formats and Contracts
-8. Training Workflow
-9. Firmware Notes
-10. Legacy Scripts
-11. GitHub Push Checklist
-12. Troubleshooting
-13. Current Cleanup Status
+2. Project Preview
+3. Hardware Setup
+4. Repository Structure
+5. Core Runtime Pipeline
+6. Environment Setup
+7. Quick Start
+8. Configuration Reference
+9. Data Formats and Contracts
+10. Training Workflow
+11. Firmware Notes
+12. Legacy Scripts
+13. GitHub Push Checklist
+14. Troubleshooting
+15. Current Cleanup Status
 
 ---
 
@@ -43,7 +47,50 @@ Main runtime entrypoint:
 
 ---
 
-## 2. Repository Structure
+## 2. Project Preview
+
+### 2.1 Demo video
+
+- [Watch the end-to-end prototype demo](image/Combine.mp4)
+
+### 2.2 Wearable prototype
+
+<p align="center">
+  <img src="image/wearable_device.png" alt="Wearable device prototype integrating Corvette-T1, EMG detector, and ESP32 into a waist strap" width="900">
+</p>
+
+A belt-mounted prototype integrates the Corvette-T1 board, EMG detector, and ESP32 into a wearable package for untethered gym use.
+
+### 2.3 Embedded EMG scoring path
+
+<p align="center">
+  <img src="image/device.png" alt="EMG analysis pipeline from analog EMG input to on-device scoring and Bluetooth transmission" width="900">
+</p>
+
+The embedded path collects analog EMG, filters the signal, runs a regression model on-device, and sends a compact score over Bluetooth to the desktop coaching app.
+
+---
+
+## 3. Hardware Setup
+
+Core components:
+
+- Corvette-T1 board for EMG acquisition and embedded inference
+- EMG detector front-end and electrodes for left/right muscle signals
+- ESP32 / BLE path exposing Nordic UART Service compatible data
+- host PC with webcam for pose tracking and desktop UI feedback
+
+### 3.1 How It Works in One Minute
+
+1. The wearable streams EMG-derived values to the host over BLE.
+2. The webcam captures body landmarks through MediaPipe Pose.
+3. Motion events are segmented, normalized, and classified by `PoseLSTM`.
+4. EMG samples are sliced by event time and fused with pose results for rep and side feedback.
+5. Optional Ollama + Breeze generates coaching text, which can be spoken via TTS.
+
+---
+
+## 4. Repository Structure
 
 ```text
 andes/
@@ -63,6 +110,10 @@ andes/
 |-- LR_score.xlsx                      # Label/score source for training
 |-- requirements.txt
 |-- .gitignore
+|-- image/
+|   |-- Combine.mp4
+|   |-- device.png
+|   `-- wearable_device.png
 |-- legacy/
 |   |-- README.md
 |   |-- LSTM.py
@@ -89,7 +140,7 @@ Large local folders are intentionally ignored in git:
 
 ---
 
-## 3. Core Runtime Pipeline
+## 5. Core Runtime Pipeline
 
 `video_v2.py` high-level flow:
 
@@ -113,13 +164,20 @@ Coach Prompt -> Ollama/Breeze (optional) -> UI + TTS
 
 ---
 
-## 4. Environment Setup
+## 6. Environment Setup
 
-### 4.1 Python
+### 6.1 Hardware prerequisites
+
+- webcam for pose tracking
+- BLE EMG device advertising Nordic UART Service compatible telemetry
+- wearable hardware path built from Corvette-T1, EMG detector, and ESP32
+- optional speaker or headphones for TTS playback
+
+### 6.2 Python
 
 Recommended: Python 3.10+ on Windows.
 
-### 4.2 Install dependencies
+### 6.3 Install dependencies
 
 ```bash
 pip install -r requirements.txt
@@ -131,7 +189,7 @@ If Excel parsing fails:
 pip install openpyxl
 ```
 
-### 4.3 Optional local LLM
+### 6.4 Optional local LLM
 
 If you want coaching text from LLM:
 
@@ -144,9 +202,9 @@ If Ollama is not running, core app logic still works; only LLM responses fail/sk
 
 ---
 
-## 5. Quick Start
+## 7. Quick Start
 
-### 5.1 Main UI app
+### 7.1 Main UI app
 
 ```bash
 python video_v2.py
@@ -158,13 +216,13 @@ Before running:
 - EMG device powered and advertising BLE UART service
 - `pose_lstm.pt` present in repository root
 
-### 5.2 Realtime integrator script (no GUI)
+### 7.2 Realtime integrator script (no GUI)
 
 ```bash
 python pc_realtime_integrator.py
 ```
 
-### 5.3 Data collection
+### 7.3 Data collection
 
 ```bash
 python camera.py
@@ -176,9 +234,9 @@ Output:
 
 ---
 
-## 6. Configuration Reference
+## 8. Configuration Reference
 
-### 6.1 Runtime app (`video_v2.py`)
+### 8.1 Runtime app (`video_v2.py`)
 
 Key constants:
 
@@ -202,7 +260,7 @@ LLM queue behavior:
 - `LLM_EXPIRE_SEC = 4.0`
 - cooldown uses `COACH_COOLDOWN_SEC` (later definition is active)
 
-### 6.2 Collector (`camera.py`)
+### 8.2 Collector (`camera.py`)
 
 Key constants:
 
@@ -217,9 +275,9 @@ Key constants:
 
 ---
 
-## 7. Data Formats and Contracts
+## 9. Data Formats and Contracts
 
-### 7.1 EMG device line format
+### 9.1 EMG device line format
 
 Expected input line:
 
@@ -229,7 +287,7 @@ tmillis,Lp,Rp,imbalance,magnitude,finalL,finalR
 
 Some paths also accept 6-column format without `tmillis`.
 
-### 7.2 Collected training CSV (`action_XXX.csv`)
+### 9.2 Collected training CSV (`action_XXX.csv`)
 
 `camera.py` writes:
 
@@ -243,7 +301,7 @@ Total per row:
 
 - 2 EMG features + 99 pose features = 101 features
 
-### 7.3 Model files
+### 9.3 Model files
 
 - `pose_lstm.pt`: used by runtime pose classifier
 - `emg_lstm.pt`: EMG regression model (training artifact)
@@ -252,9 +310,9 @@ Total per row:
 
 ---
 
-## 8. Training Workflow
+## 10. Training Workflow
 
-### 8.1 Pose classifier
+### 10.1 Pose classifier
 
 ```bash
 python train_pose_lstm.py --data_dir ./collected_data --xlsx ./LR_score.xlsx
@@ -270,7 +328,7 @@ Output:
 
 - `pose_lstm.pt`
 
-### 8.2 EMG LSTM
+### 10.2 EMG LSTM
 
 ```bash
 python train_emg_lstm.py --data_dir ./collected_data --xlsx ./LR_score.xlsx
@@ -286,7 +344,7 @@ Output:
 
 - `emg_lstm.pt`
 
-### 8.3 TensorFlow INT8 EMG model
+### 10.3 TensorFlow INT8 EMG model
 
 ```bash
 python train_emg40_tf_int8.py --data_dir ./collected_data --xlsx ./LR_score.xlsx
@@ -307,7 +365,7 @@ Outputs:
 
 ---
 
-## 9. Firmware Notes
+## 11. Firmware Notes
 
 `main/main.ino` handles:
 
@@ -323,7 +381,7 @@ Alternative firmware snapshot:
 
 ---
 
-## 10. Legacy Scripts
+## 12. Legacy Scripts
 
 Legacy scripts were moved to `legacy/` for cleaner root structure:
 
@@ -340,15 +398,15 @@ See details in:
 
 ---
 
-## 11. GitHub Push Checklist
+## 13. GitHub Push Checklist
 
-### 11.1 Before commit
+### 13.1 Before commit
 
 1. Verify large local folders are ignored (`Training_Data`, `data`, `collected_data`).
 2. Confirm no temporary artifacts are staged.
 3. Optionally keep or remove model binaries depending on repository policy.
 
-### 11.2 Basic push commands
+### 13.2 Basic push commands
 
 ```bash
 git init
@@ -368,7 +426,7 @@ git push -u origin main
 
 ---
 
-## 12. Troubleshooting
+## 14. Troubleshooting
 
 - `ModuleNotFoundError`
   - Reinstall via `pip install -r requirements.txt`
@@ -383,7 +441,7 @@ git push -u origin main
 
 ---
 
-## 13. Current Cleanup Status
+## 15. Current Cleanup Status
 
 Completed:
 

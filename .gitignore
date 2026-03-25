@@ -40,4 +40,5 @@ backup_before_swap/
 *.rar
 *.7z
 *.mp4
+!image/Combine.mp4
 *.npy
